@@ -12,23 +12,20 @@
         }
         body {
             height: 100vh;
-            background: url('background.jpg') center/cover no-repeat;
+            background: url('background-computer.jpg') center/cover no-repeat;
             overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
+            /* 背景透明度通过JavaScript动态设置 */
         }
-        /* 其余样式保持不变 */
         .bubble {
             position: absolute;
-            width: 18px;
-            height: 18px;
-            background-color: rgba(255, 50, 80, 0.9);
-            border-radius: 50%;
+            width: 48px;
+            height: 48px;
             transform: scale(0);
             transition: transform 0.3s ease-out, opacity 0.3s ease-out;
             cursor: pointer;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
         }
         .bubble.active {
             transform: scale(1);
@@ -37,116 +34,120 @@
             opacity: 0;
             transform: scale(0.5);
         }
-        .control {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.8);
-            padding: 15px 25px;
-            border-radius: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-        button {
-            padding: 8px 18px;
-            background: #ff3250;
-            color: white;
-            border: none;
-            border-radius: 15px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        button:hover {
-            background: #e62e48;
-        }
     </style>
 </head>
 <body>
-    <div class="control">
-        <button id="restart">重新生成</button>
-    </div>
-
+    <!-- 引入动画控制脚本 -->
+    <script src="bubble-animation.js"></script>
+    
     <script>
+        // 初始化动画，可以传入自定义配置
         document.addEventListener('DOMContentLoaded', function() {
-            const restartBtn = document.getElementById('restart');
-
-            function startAnimation() {
-                // 清除现有气泡
-                document.querySelectorAll('.bubble').forEach(b => b.remove());
-                
-                const centerX = window.innerWidth / 2;
-                const centerY = window.innerHeight / 2;
-                // 稍微增大缩放系数，让爱心更大一些
-                const scale = Math.min(window.innerWidth, window.innerHeight) * 0.022; 
-                
-                const points = [];
-
-                // 1. 生成主要点 (密度较低)
-                for (let t = 0; t <= Math.PI; t += Math.PI / 50) {
-                    const x = 16 * Math.sin(t) ** 3;
-                    const y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
-                    points.push({x: centerX + x * scale, y: centerY - y * scale});
-                    if (t > 0 && t < Math.PI) {
-                        points.push({x: centerX - x * scale, y: centerY - y * scale});
-                    }
-                }
-
-                // 2. 在尖端 (t = PI) 附近增加额外的点，以形成明显的尖角
-                const tipDensity = 15; // 在尖端额外增加15个点
-                for (let i = 1; i <= tipDensity; i++) {
-                    const t = Math.PI - (Math.PI / 180) * i; // 从PI开始，向后微小步进
-                    const x = 16 * Math.sin(t) ** 3;
-                    const y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
-                    points.push({x: centerX + x * scale, y: centerY - y * scale});
-                    points.push({x: centerX - x * scale, y: centerY - y * scale});
-                }
-                
-                // 3. 创建气泡元素，但不立即添加到DOM
-                const bubbles = points.map((point, index) => {
-                    const bubble = document.createElement('div');
-                    bubble.className = 'bubble';
-                    bubble.style.left = `${point.x}px`;
-                    bubble.style.top = `${point.y}px`;
-                    
-                    bubble.addEventListener('click', () => {
-                        if (!bubble.classList.contains('fade')) {
-                            bubble.classList.add('fade');
-                            setTimeout(() => bubble.remove(), 300);
-                        }
-                    });
-                    return bubble;
-                });
-
-                // 4. 按优化后的顺序添加并激活气泡，模拟"绽放"效果
-                // 反转数组，让尖端的点先出现
-                const reversedBubbles = [...bubbles].reverse();
-                
-                reversedBubbles.forEach((bubble, index) => {
-                    document.body.appendChild(bubble);
-                    // 使用setTimeout创建延迟，让气泡逐个显示
-                    setTimeout(() => {
-                        bubble.classList.add('active');
-                    }, index * 25); // 每个气泡延迟25ms，总时长约为 bubbles.length * 25ms
-                });
-
-                // 5. 显示完成后，反向消失
-                // 总动画时长约为 bubbles.length * 25ms + 3000ms(等待时间)
-                const totalDisplayTime = reversedBubbles.length * 25 + 3000;
-                setTimeout(() => {
-                    bubbles.forEach((bubble, index) => {
-                        setTimeout(() => {
-                            if (bubble && !bubble.classList.contains('fade')) {
-                                bubble.classList.add('fade');
-                                setTimeout(() => bubble.remove(), 300);
-                            }
-                        }, index * 25); // 按原顺序消失
-                    });
-                }, totalDisplayTime);
-            }
+            // 设备检测
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             
-            restartBtn.addEventListener('click', startAnimation);
-            window.addEventListener('resize', startAnimation); // 窗口缩放时重新生成
-            startAnimation(); // 初始执行
+            // 电脑端配置
+            const desktopConfig = {
+                // 气泡大小(像素) - 控制每个气泡的宽度和高度
+                // 增大: 气泡变大，需要更少气泡达到相同覆盖率，视觉冲击力强
+                // 减小: 气泡变小，需要更多气泡，效果更细腻
+                bubbleSize: 128,
+                
+                // 心形密集度 - 控制心形轮廓上点的密度(数值越小点越少)
+                // 增大: 心形点变稀疏，可能不够连续，性能略微提升
+                // 减小: 心形点变密集，边缘更平滑，轻微增加渲染负担
+                heartDensity: 20,
+                
+                // 心形尖端点数 - 控制心形底部尖角处额外添加的点数量
+                // 增大: 心形尖角更锐利明显，增加细节表现
+                // 减小: 心形尖角可能显得圆钝，减少细节但提升性能
+                tipDensity: 1,
+                
+                // 心形缩放因子 - 控制心形整体大小
+                // 增大: 心形变大，可能超出屏幕边界
+                // 减小: 心形变小，为后续填充留出更多空间
+                heartScaleFactor: 0.030,
+                
+                // 心形点显示延迟(毫秒) - 控制心形"绘制"的速度
+                // 增大: 心形形成过程变慢，节奏更舒缓
+                // 减小: 心形快速显现，节奏更快
+                heartPointDelay: 150,
+                
+                // 填充间隔(毫秒) - 控制随机填充屏幕的时间间隔
+                // 增大: 填充过程变慢，每个气泡出现间隔更明显
+                // 减小: 快速填满屏幕，视觉冲击力更强
+                fillInterval: 120,
+                
+                // 消失间隔(毫秒) - 控制气泡消失的时间间隔
+                // 增大: 气泡消失过程更缓慢，结束更优雅
+                // 减小: 气泡快速消失，结束更干脆
+                disappearInterval: 50,
+                
+                // 屏幕覆盖率(0-1) - 控制气泡覆盖屏幕的百分比
+                // 增大: 更多气泡被生成，动画持续时间更长
+                // 减小: 生成气泡数量减少，动画更快完成
+                coveragePercentage: 0.4,
+                
+                // GIF文件数量 - 指定bubble文件夹中GIF文件的数量
+                // 增大: 更多样式变化，视觉更丰富但需确保文件存在
+                // 减小: 样式重复度增加，减少资源需求
+                gifFiles: 18,
+                
+                // 背景透明度(0-1) - 控制背景图片的透明度
+                // 增大: 背景更清晰，可能更突出
+                // 减小: 背景更淡，更不显眼
+                backgroundOpacity: 0.8,
+                
+                // GIF透明度(0-1) - 控制气泡GIF的透明度
+                // 增大: 气泡更清晰，更突出
+                // 减小: 气泡更淡，更柔和
+                gifOpacity: 1
+            };
+            
+            // 手机端配置
+            const mobileConfig = {
+                // 气泡大小(像素) - 控制每个气泡的宽度和高度
+                bubbleSize: 60,
+                
+                // 心形密集度 - 控制心形轮廓上点的密度
+                heartDensity: 10,
+                
+                // 心形尖端点数 - 控制心形底部尖角处额外添加的点数量
+                tipDensity: 1,
+                
+                // 心形缩放因子 - 控制心形整体大小
+                heartScaleFactor: 0.025,
+                
+                // 心形点显示延迟(毫秒) - 控制心形"绘制"的速度
+                heartPointDelay: 150,
+                
+                // 填充间隔(毫秒) - 控制随机填充屏幕的时间间隔
+                fillInterval: 120,
+                
+                // 消失间隔(毫秒) - 控制气泡消失的时间间隔
+                disappearInterval: 50,
+                
+                // 屏幕覆盖率(0-1) - 控制气泡覆盖屏幕的百分比
+                coveragePercentage: 0.4,
+                
+                // GIF文件数量 - 指定bubble文件夹中GIF文件的数量
+                gifFiles: 18,
+                
+                // 背景透明度(0-1) - 控制背景图片的透明度
+                backgroundOpacity: 0.8,
+                
+                // GIF透明度(0-1) - 控制气泡GIF的透明度
+                gifOpacity: 1
+            };
+            
+            // 根据设备类型选择配置
+            const config = isMobile ? mobileConfig : desktopConfig;
+            
+            // 使用配置初始化动画
+            const animation = new BubbleAnimation(config);
+            
+            // 启用自动循环模式
+            animation.enableAutoLoop();
         });
     </script>
 </body>
