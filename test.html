@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>完美爱心气泡</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            height: 100vh;
+            background: url('background.jpg') center/cover no-repeat;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        /* 其余样式保持不变 */
+        .bubble {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background-color: rgba(255, 50, 80, 0.9);
+            border-radius: 50%;
+            transform: scale(0);
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+        }
+        .bubble.active {
+            transform: scale(1);
+        }
+        .bubble.fade {
+            opacity: 0;
+            transform: scale(0.5);
+        }
+        .control {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.8);
+            padding: 15px 25px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        button {
+            padding: 8px 18px;
+            background: #ff3250;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #e62e48;
+        }
+    </style>
+</head>
+<body>
+    <div class="control">
+        <button id="restart">重新生成</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const restartBtn = document.getElementById('restart');
+
+            function startAnimation() {
+                // 清除现有气泡
+                document.querySelectorAll('.bubble').forEach(b => b.remove());
+                
+                const centerX = window.innerWidth / 2;
+                const centerY = window.innerHeight / 2;
+                // 稍微增大缩放系数，让爱心更大一些
+                const scale = Math.min(window.innerWidth, window.innerHeight) * 0.022; 
+                
+                const points = [];
+
+                // 1. 生成主要点 (密度较低)
+                for (let t = 0; t <= Math.PI; t += Math.PI / 50) {
+                    const x = 16 * Math.sin(t) ** 3;
+                    const y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+                    points.push({x: centerX + x * scale, y: centerY - y * scale});
+                    if (t > 0 && t < Math.PI) {
+                        points.push({x: centerX - x * scale, y: centerY - y * scale});
+                    }
+                }
+
+                // 2. 在尖端 (t = PI) 附近增加额外的点，以形成明显的尖角
+                const tipDensity = 15; // 在尖端额外增加15个点
+                for (let i = 1; i <= tipDensity; i++) {
+                    const t = Math.PI - (Math.PI / 180) * i; // 从PI开始，向后微小步进
+                    const x = 16 * Math.sin(t) ** 3;
+                    const y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+                    points.push({x: centerX + x * scale, y: centerY - y * scale});
+                    points.push({x: centerX - x * scale, y: centerY - y * scale});
+                }
+                
+                // 3. 创建气泡元素，但不立即添加到DOM
+                const bubbles = points.map((point, index) => {
+                    const bubble = document.createElement('div');
+                    bubble.className = 'bubble';
+                    bubble.style.left = `${point.x}px`;
+                    bubble.style.top = `${point.y}px`;
+                    
+                    bubble.addEventListener('click', () => {
+                        if (!bubble.classList.contains('fade')) {
+                            bubble.classList.add('fade');
+                            setTimeout(() => bubble.remove(), 300);
+                        }
+                    });
+                    return bubble;
+                });
+
+                // 4. 按优化后的顺序添加并激活气泡，模拟"绽放"效果
+                // 反转数组，让尖端的点先出现
+                const reversedBubbles = [...bubbles].reverse();
+                
+                reversedBubbles.forEach((bubble, index) => {
+                    document.body.appendChild(bubble);
+                    // 使用setTimeout创建延迟，让气泡逐个显示
+                    setTimeout(() => {
+                        bubble.classList.add('active');
+                    }, index * 25); // 每个气泡延迟25ms，总时长约为 bubbles.length * 25ms
+                });
+
+                // 5. 显示完成后，反向消失
+                // 总动画时长约为 bubbles.length * 25ms + 3000ms(等待时间)
+                const totalDisplayTime = reversedBubbles.length * 25 + 3000;
+                setTimeout(() => {
+                    bubbles.forEach((bubble, index) => {
+                        setTimeout(() => {
+                            if (bubble && !bubble.classList.contains('fade')) {
+                                bubble.classList.add('fade');
+                                setTimeout(() => bubble.remove(), 300);
+                            }
+                        }, index * 25); // 按原顺序消失
+                    });
+                }, totalDisplayTime);
+            }
+            
+            restartBtn.addEventListener('click', startAnimation);
+            window.addEventListener('resize', startAnimation); // 窗口缩放时重新生成
+            startAnimation(); // 初始执行
+        });
+    </script>
+</body>
+</html>
